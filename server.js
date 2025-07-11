@@ -28,10 +28,10 @@ const broker = new MessageBroker(io);
 const dataIngestionService = new DataIngestionService(broker);
 const dataProcessingService = new DataProcessingService(broker);
 const anomalyDetectionService = new AnomalyDetectionService(broker);
-const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingService(broker, io);
-const simulationService = new SimulationService(broker);
 const metricsService = new MetricsService(broker);
 const aiInsightsService = new AIInsightsService(broker);
+const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingService(broker, io, aiInsightsService);
+const simulationService = new SimulationService(broker);
 
 // API Routes
 app.post('/api/simulate', (req, res) => {

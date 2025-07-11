@@ -181,7 +181,7 @@
             font-size: 0.95rem;
         }
 
-        .alert-item, .decision-item {
+        .alert-item, .decision-item, .ai-solution-item {
             background-color: #f9f9f9;
             border-radius: 8px;
             padding: 10px 15px;
@@ -213,6 +213,85 @@
             opacity: 0.9;
             margin-top: 5px;
         }
+
+        /* Anomaly Highlighting */
+        .highlight-red {
+            color: red !important;
+            font-weight: bold;
+        }
+
+        .highlight-red-border {
+            border: 2px solid red !important;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5) !important;
+        }
+
+        .highlight-green {
+            color: green !important;
+            font-weight: bold;
+        }
+
+        .highlight-green-border {
+            border: 2px solid green !important;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5) !important;
+        }
+
+        .log-container {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        .log-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .log-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .log-tab.active {
+            color: var(--walmart-blue);
+            border-bottom-color: var(--walmart-blue);
+        }
+
+        .log-content {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            background-color: #fdfdfd;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry strong {
+            color: var(--walmart-blue);
+        }
+
+        .log-entry.anomaly strong { color: red; }
+        .log-entry.decision strong { color: green; }
+        .log-entry.ai-insight strong { color: purple; }
+        .log-entry.simulation strong { color: orange; }
 
         @media (max-width: 992px) {
             .main-content {
@@ -249,7 +328,7 @@
         
         <div class="main-content">
             <div class="left-column">
-                <div class="card">
+                <div class="card" id="sales-performance-card">
                     <h3>Sales Performance</h3>
                     <div class="chart-container">
                         <canvas id="salesChart"></canvas>
@@ -266,7 +345,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="iot-sensor-data-card">
                     <h3>IoT Sensor Data</h3>
                     <div class="chart-container">
                         <canvas id="iotChart"></canvas>
@@ -283,8 +362,11 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3>Warehouse Content</h3>
+                <div class="card" id="warehouse-inventory-card">
+                    <h3>Warehouse & Inventory</h3>
+                    <div class="chart-container">
+                        <canvas id="inventoryTurnoverChart"></canvas>
+                    </div>
                     <div class="metric-grid">
                         <div class="metric-item">
                             <div class="metric-value" id="warehouse-occupancy">0%</div>
@@ -294,10 +376,18 @@
                             <div class="metric-value" id="warehouse-items">0</div>
                             <div class="metric-label">Total Items</div>
                         </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="inventory-turnover">0</div>
+                            <div class="metric-label">Inventory Turnover</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="warehouse-pick-rate">0</div>
+                            <div class="metric-label">Pick Rate (items/hr)</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="sustainability-metrics-card">
                     <h3>Sustainability Metrics</h3>
                     <div class="metric-grid">
                         <div class="metric-item">
@@ -334,8 +424,11 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="global-performance-card">
                     <h3>Global Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="onTimeDeliveryChart"></canvas>
+                    </div>
                     <div class="metric-grid">
                         <div class="metric-item">
                             <div class="metric-value" id="open-stores">0</div>
@@ -345,10 +438,48 @@
                             <div class="metric-value" id="on-time-delivery">0%</div>
                             <div class="metric-label">On-Time Delivery</div>
                         </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="order-fulfillment-time">0 hrs</div>
+                            <div class="metric-label">Order Fulfillment</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="return-rate">0%</div>
+                            <div class="metric-label">Return Rate</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="supplier-performance-card">
+                    <h3>Supplier Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="supplierOnTimeChart"></canvas>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-value" id="supplier-on-time">0%</div>
+                            <div class="metric-label">On-Time Delivery</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="supplier-defect-rate">0%</div>
+                            <div class="metric-label">Defect Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="transportation-efficiency-card">
+                    <h3>Transportation Efficiency</h3>
+                    <div class="chart-container">
+                        <canvas id="transportCostChart"></canvas>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-value" id="transport-cost-per-mile">$0</div>
+                            <div class="metric-label">Cost/Mile</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="weather-impact-card">
                     <h3>Weather Impact</h3>
                     <div class="weather-widget">
                         <div class="weather-icon" id="weather-icon">☁️</div>
@@ -357,6 +488,24 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="log-container">
+            <h3>System Logs</h3>
+            <div class="log-tabs">
+                <div class="log-tab active" data-log-category="all">All</div>
+                <div class="log-tab" data-log-category="anomaly">Anomalies</div>
+                <div class="log-tab" data-log-category="decision">Decisions</div>
+                <div class="log-tab" data-log-category="ai-insight">AI Insights</div>
+                <div class="log-tab" data-log-category="simulation">Simulations</div>
+                <div class="log-tab" data-log-category="metric-update">Metrics</div>
+            </div>
+            <div class="log-content" id="log-content-all"></div>
+            <div class="log-content" id="log-content-anomaly" style="display:none;"></div>
+            <div class="log-content" id="log-content-decision" style="display:none;"></div>
+            <div class="log-content" id="log-content-ai-insight" style="display:none;"></div>
+            <div class="log-content" id="log-content-simulation" style="display:none;"></div>
+            <div class="log-content" id="log-content-metric-update" style="display:none;"></div>
         </div>
     </div>
 
