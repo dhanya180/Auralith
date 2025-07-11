@@ -28,10 +28,10 @@ const broker = new MessageBroker(io);
 const dataIngestionService = new DataIngestionService(broker);
 const dataProcessingService = new DataProcessingService(broker);
 const anomalyDetectionService = new AnomalyDetectionService(broker);
-const metricsService = new MetricsService(broker);
+const simulationService = new SimulationService(broker);
+const metricsService = new MetricsService(broker, simulationService);
 const aiInsightsService = new AIInsightsService(broker);
 const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingService(broker, io, aiInsightsService);
-const simulationService = new SimulationService(broker);
 
 // API Routes
 app.post('/api/simulate', (req, res) => {
@@ -62,14 +62,7 @@ io.on('connection', (socket) => {
 
 // Simulate real-time data
 setInterval(() => {
-  const posData = {
-    type: 'pos',
-    timestamp: new Date().toISOString(),
-    store_id: `store${Math.floor(Math.random() * 2) + 1}`,
-    sales: Math.floor(Math.random() * 300),
-    transactions: Math.floor(Math.random() * 50),
-  };
-  dataIngestionService.ingest(posData);
+  
 
   const iotData = {
     type: 'iot',

@@ -7,18 +7,50 @@ let inventoryTurnoverChart;
 let onTimeDeliveryChart;
 let supplierOnTimeChart;
 let transportCostChart;
+let webTrafficChart;
 
 let activeAnomaly = null;
 
+let activeCategory = 'sales-web'; // Default active category
+let previousMetrics = {}; // To store previous metric values for trend indicators
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeCharts();
+    showCategory(activeCategory); // Show default category on load
 
-    const simulateAnomalyBtn = document.getElementById('simulate-anomaly-btn');
-    simulateAnomalyBtn.addEventListener('click', () => {
+    document.getElementById('simulate-anomaly-btn').addEventListener('click', () => {
         const scenario = prompt("Enter anomaly type to simulate (e.g., demand_surge, delivery_delay, warehouse_fire, supplier_strike):");
         if (scenario) {
             socket.emit('simulate_anomaly', { scenario });
         }
+    });
+
+    document.getElementById('simulate-web-traffic-spike-btn').addEventListener('click', () => {
+        socket.emit('simulate_anomaly', { scenario: 'web_traffic_spike' });
+    });
+
+    document.getElementById('simulate-inventory-fill-btn').addEventListener('click', () => {
+        socket.emit('simulate_anomaly', { scenario: 'inventory_fill' });
+    });
+
+    document.getElementById('simulate-inventory-stockout-btn').addEventListener('click', () => {
+        socket.emit('simulate_anomaly', { scenario: 'inventory_stockout' });
+    });
+
+    document.getElementById('simulate-seasonal-spike-btn').addEventListener('click', () => {
+        socket.emit('simulate_anomaly', { scenario: 'seasonal_spike' });
+    });
+
+    // Category navigation logic
+    document.querySelectorAll('.category-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const category = this.dataset.category;
+            if (activeCategory !== category) {
+                showCategory(category);
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            }
+        });
     });
 
     // Log tab switching logic
@@ -32,6 +64,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+function showCategory(category) {
+    document.querySelectorAll('.category-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    document.getElementById(`${category}-section`).style.display = 'block';
+    activeCategory = category;
+    console.log(`[app.js] Switched to category: ${activeCategory}`);
+}
+
 
 function initializeCharts() {
     const salesCtx = document.getElementById('salesChart').getContext('2d');
@@ -241,18 +283,50 @@ function initializeCharts() {
             }
         }
     });
+
+    const webTrafficCtx = document.getElementById('webTrafficChart').getContext('2d');
+    webTrafficChart = new Chart(webTrafficCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Web Traffic',
+                data: [],
+                borderColor: '#0071ce',
+                backgroundColor: 'rgba(0, 113, 206, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    ticks: { color: '#666' },
+                    grid: { color: '#eee' }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' },
+                    grid: { color: '#eee' }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
 }
 
 socket.on('update', (data) => {
     const lastUpdateEl = document.getElementById('last-update');
     lastUpdateEl.textContent = new Date().toLocaleTimeString();
 
-    if (data.type === 'pos') {
-        updateChart(salesChart, data.timestamp, data.sales);
-        document.getElementById('total-sales').textContent = data.sales;
-        document.getElementById('avg-transaction').textContent = data.transactions;
-        addLogEntry('metric-update', `POS Data: Sales - ${data.sales}, Transactions - ${data.transactions}`);
-    } else if (data.type === 'iot') {
+    // The 'update' event is primarily for IoT data now. Sales are in metrics_update.
+    if (data.type === 'iot') {
         updateChart(iotChart, data.timestamp, data.value);
         document.getElementById('current-temp').textContent = `${data.value.toFixed(1)}°C`;
         addLogEntry('metric-update', `IoT Data: Temperature - ${data.value.toFixed(1)}°C`);
@@ -267,6 +341,7 @@ socket.on('anomaly', (anomaly) => {
     anomalyAlertsEl.prepend(alertEl);
 
     highlightMetrics(anomaly.affectedMetrics, 'red');
+    applyAnomalyTrendIndicators(anomaly.metricChanges);
     activeAnomaly = anomaly;
     addLogEntry('anomaly', `Anomaly Detected: ${anomaly.message}`);
 });
@@ -287,31 +362,62 @@ socket.on('metrics_update', (metrics) => {
     document.getElementById('carbon-reduced').textContent = `${metrics.carbonReduced} kg`;
     document.getElementById('open-stores').textContent = metrics.openStores;
     document.getElementById('on-time-delivery').textContent = `${metrics.onTimeDelivery}%`;
-    document.getElementById('inventory-turnover').textContent = metrics.inventoryTurnover;
+    document.getElementById('inventory-turnover').textContent = `${metrics.inventoryTurnover.toFixed(2)}`;
     document.getElementById('order-fulfillment-time').textContent = `${metrics.orderFulfillmentTime} hrs`;
     document.getElementById('supplier-on-time').textContent = `${metrics.supplierOnTimeDelivery}%`;
     document.getElementById('supplier-defect-rate').textContent = `${metrics.supplierDefectRate}%`;
-    document.getElementById('transport-cost-per-mile').textContent = `$${metrics.transportationCostPerMile}`;
+    document.getElementById('transport-cost-per-mile').textContent = `${metrics.transportationCostPerMile}`;
     document.getElementById('warehouse-pick-rate').textContent = metrics.warehousePickRate;
     document.getElementById('return-rate').textContent = `${(metrics.returnRate * 100).toFixed(2)}%`;
+    document.getElementById('current-web-traffic').textContent = metrics.webTraffic;
+    document.getElementById('total-sales').textContent = metrics.sales; // Update sales from metrics_update
 
     document.getElementById('weather-icon').textContent = getWeatherIcon(metrics.weather.condition);
     document.getElementById('weather-temp').textContent = `${metrics.weather.temperature}°C`;
     document.getElementById('weather-condition').textContent = metrics.weather.condition;
     document.getElementById('humidity').textContent = `${metrics.weather.humidity}%`;
 
-    // Update new charts
-    updateChart(inventoryTurnoverChart, new Date().toISOString(), metrics.inventoryTurnover);
-    updateChart(onTimeDeliveryChart, new Date().toISOString(), metrics.onTimeDelivery);
-    updateChart(supplierOnTimeChart, new Date().toISOString(), metrics.supplierOnTimeDelivery);
-    updateChart(transportCostChart, new Date().toISOString(), metrics.transportationCostPerMile);
+    // Update charts based on active category
+    if (activeCategory === 'sales-web') {
+        updateChart(salesChart, new Date().toISOString(), metrics.sales);
+        updateChart(webTrafficChart, new Date().toISOString(), metrics.webTraffic);
+    } else if (activeCategory === 'warehouse-inventory') {
+        updateChart(inventoryTurnoverChart, new Date().toISOString(), metrics.inventoryTurnover);
+        // IoT chart is updated by the 'update' event, not metrics_update
+    } else if (activeCategory === 'supply-chain') {
+        updateChart(onTimeDeliveryChart, new Date().toISOString(), metrics.onTimeDelivery);
+        updateChart(supplierOnTimeChart, new Date().toISOString(), metrics.supplierOnTimeDelivery);
+        updateChart(transportCostChart, new Date().toISOString(), metrics.transportationCostPerMile);
+    }
+
+    // Apply trend indicators
+    applyTrendIndicators(metrics, previousMetrics);
+    previousMetrics = { ...metrics }; // Store current metrics for next comparison
 
     // Re-apply anomaly highlighting on metric updates if an anomaly is active
     if (activeAnomaly) {
         highlightMetrics(activeAnomaly.affectedMetrics, 'red');
     }
-    addLogEntry('metric-update', `Metrics Updated: Warehouse Occupancy - ${(metrics.warehouseOccupancy * 100).toFixed(1)}%, On-Time Delivery - ${metrics.onTimeDelivery}%`);
+    addLogEntry('metric-update', `Metrics Updated: Sales - ${metrics.sales}, Web Traffic - ${metrics.webTraffic}`);
 });
+
+function applyTrendIndicators(currentMetrics, previousMetrics) {
+    for (const key in currentMetrics) {
+        if (previousMetrics[key] !== undefined && typeof currentMetrics[key] === 'number' && typeof previousMetrics[key] === 'number') {
+            const element = document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase()); // Convert camelCase to kebab-case
+            if (element) {
+                let trendIndicator = '';
+                if (currentMetrics[key] > previousMetrics[key]) {
+                    trendIndicator = ' 📈'; // Up arrow
+                } else if (currentMetrics[key] < previousMetrics[key]) {
+                    trendIndicator = ' 📉'; // Down arrow
+                }
+                // Remove old indicator and add new one
+                element.innerHTML = element.textContent.replace(/ [📈📉]/g, '') + trendIndicator;
+            }
+        }
+    }
+}
 
 socket.on('ai_insights', (insight) => {
     document.getElementById('ai-insights-content').textContent = insight.insight;
@@ -330,6 +436,7 @@ socket.on('ai_solution', (data) => {
     // Clear anomaly highlighting after a solution is provided (or after a delay)
     setTimeout(() => {
         clearHighlights();
+        clearAnomalyTrendIndicators(); // Clear anomaly trend indicators
         activeAnomaly = null;
     }, 10000); // Clear after 10 seconds
 });
@@ -337,8 +444,44 @@ socket.on('ai_solution', (data) => {
 socket.on('simulation_result', (data) => {
     addLogEntry('simulation', `Simulation Result: ${data.message}`);
     highlightMetrics(data.affectedMetrics, 'red');
+    applyAnomalyTrendIndicators(data.metricChanges);
     activeAnomaly = data;
 });
+
+function applyAnomalyTrendIndicators(metricChanges) {
+    clearAnomalyTrendIndicators(); // Clear existing indicators before applying new ones
+    metricChanges.forEach(change => {
+        const element = document.getElementById(change.id);
+        if (element) {
+            let indicator = '';
+            if (change.changeType === 'increase') {
+                indicator = ' ⬆️';
+            } else if (change.changeType === 'decrease') {
+                indicator = ' ⬇️';
+            }
+            // Remove existing anomaly indicators before adding new one
+            element.innerHTML = element.textContent.replace(/ [⬆️⬇️]/g, '') + indicator;
+
+            // Add a class for styling if needed (e.g., red for negative impact, green for positive)
+            if (change.valueChange === 'significant' || change.valueChange === 'moderate') {
+                if (change.changeType === 'decrease') {
+                    element.classList.add('anomaly-negative-trend');
+                } else if (change.changeType === 'increase') {
+                    element.classList.add('anomaly-positive-trend');
+                }
+            }
+        }
+    });
+}
+
+function clearAnomalyTrendIndicators() {
+    document.querySelectorAll('.anomaly-negative-trend').forEach(el => el.classList.remove('anomaly-negative-trend'));
+    document.querySelectorAll('.anomaly-positive-trend').forEach(el => el.classList.remove('anomaly-positive-trend'));
+    // Also remove the arrows
+    document.querySelectorAll('.metric-value').forEach(el => {
+        el.innerHTML = el.textContent.replace(/ [⬆️⬇️]/g, '');
+    });
+}
 
 function updateChart(chart, label, newData) {
     chart.data.labels.push(new Date(label).toLocaleTimeString());

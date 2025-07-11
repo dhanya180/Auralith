@@ -293,6 +293,17 @@
         .log-entry.ai-insight strong { color: purple; }
         .log-entry.simulation strong { color: orange; }
 
+        /* Anomaly Trend Indicators */
+        .anomaly-negative-trend {
+            color: red !important;
+            font-weight: bold;
+        }
+
+        .anomaly-positive-trend {
+            color: green !important;
+            font-weight: bold;
+        }
+
         @media (max-width: 992px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -322,87 +333,18 @@
         </div>
 
         <div class="card">
-            <h3>Actions</h3>
-            <button class="btn" id="simulate-anomaly-btn">Simulate Anomaly</button>
+            <h3>Simulation Controls</h3>
+            <div class="controls" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <button class="btn" id="simulate-anomaly-btn">Simulate Anomaly</button>
+                <button class="btn" id="simulate-web-traffic-spike-btn">Simulate Web Traffic Spike</button>
+                <button class="btn" id="simulate-inventory-fill-btn">Simulate Inventory Fill</button>
+                <button class="btn" id="simulate-inventory-stockout-btn">Simulate Inventory Stockout</button>
+                <button class="btn" id="simulate-seasonal-spike-btn">Simulate Seasonal Spike</button>
+            </div>
         </div>
         
         <div class="main-content">
             <div class="left-column">
-                <div class="card" id="sales-performance-card">
-                    <h3>Sales Performance</h3>
-                    <div class="chart-container">
-                        <canvas id="salesChart"></canvas>
-                    </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="total-sales">0</div>
-                            <div class="metric-label">Total Sales</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="avg-transaction">0</div>
-                            <div class="metric-label">Avg Transaction</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" id="iot-sensor-data-card">
-                    <h3>IoT Sensor Data</h3>
-                    <div class="chart-container">
-                        <canvas id="iotChart"></canvas>
-                    </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="current-temp">0°C</div>
-                            <div class="metric-label">Current Temp</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="humidity">0%</div>
-                            <div class="metric-label">Humidity</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" id="warehouse-inventory-card">
-                    <h3>Warehouse & Inventory</h3>
-                    <div class="chart-container">
-                        <canvas id="inventoryTurnoverChart"></canvas>
-                    </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="warehouse-occupancy">0%</div>
-                            <div class="metric-label">Occupancy</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="warehouse-items">0</div>
-                            <div class="metric-label">Total Items</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="inventory-turnover">0</div>
-                            <div class="metric-label">Inventory Turnover</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="warehouse-pick-rate">0</div>
-                            <div class="metric-label">Pick Rate (items/hr)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" id="sustainability-metrics-card">
-                    <h3>Sustainability Metrics</h3>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="waste-saved">0 kg</div>
-                            <div class="metric-label">Waste Saved</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="carbon-reduced">0 kg</div>
-                            <div class="metric-label">Carbon Reduced</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="right-column">
                 <div class="card">
                     <h3>AI-Powered Insights</h3>
                     <div class="ai-insights-content" id="ai-insights-content">
@@ -423,68 +365,171 @@
                         <p>No autonomous decisions made yet.</p>
                     </div>
                 </div>
+            </div>
 
-                <div class="card" id="global-performance-card">
-                    <h3>Global Performance</h3>
-                    <div class="chart-container">
-                        <canvas id="onTimeDeliveryChart"></canvas>
+            <div class="right-column">
+                <nav class="category-nav" style="margin-bottom: 20px; display: flex; justify-content: center; gap: 10px;">
+                    <button class="btn category-btn active" data-category="sales-web">Sales & Web Traffic</button>
+                    <button class="btn category-btn" data-category="warehouse-inventory">Warehouse & Inventory</button>
+                    <button class="btn category-btn" data-category="supply-chain">Supply Chain Performance</button>
+                    <button class="btn category-btn" data-category="sustainability-weather">Sustainability & Weather</button>
+                </nav>
+
+                <div id="sales-web-section" class="category-section active">
+                    <div class="card" id="sales-performance-card">
+                        <h3>Sales Performance</h3>
+                        <div class="chart-container">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="total-sales">0</div>
+                                <div class="metric-label">Total Sales</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="avg-transaction">0</div>
+                                <div class="metric-label">Avg Transaction</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="open-stores">0</div>
-                            <div class="metric-label">Open Stores</div>
+
+                    <div class="card" id="web-traffic-card">
+                        <h3>Web Traffic</h3>
+                        <div class="chart-container">
+                            <canvas id="webTrafficChart"></canvas>
                         </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="on-time-delivery">0%</div>
-                            <div class="metric-label">On-Time Delivery</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="order-fulfillment-time">0 hrs</div>
-                            <div class="metric-label">Order Fulfillment</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="return-rate">0%</div>
-                            <div class="metric-label">Return Rate</div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="current-web-traffic">0</div>
+                                <div class="metric-label">Visitors</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card" id="supplier-performance-card">
-                    <h3>Supplier Performance</h3>
-                    <div class="chart-container">
-                        <canvas id="supplierOnTimeChart"></canvas>
-                    </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="supplier-on-time">0%</div>
-                            <div class="metric-label">On-Time Delivery</div>
+                <div id="warehouse-inventory-section" class="category-section" style="display:none;">
+                    <div class="card" id="warehouse-inventory-card">
+                        <h3>Warehouse & Inventory</h3>
+                        <div class="chart-container">
+                            <canvas id="inventoryTurnoverChart"></canvas>
                         </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="supplier-defect-rate">0%</div>
-                            <div class="metric-label">Defect Rate</div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="warehouse-occupancy">0%</div>
+                                <div class="metric-label">Occupancy</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="warehouse-items">0</div>
+                                <div class="metric-label">Total Items</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="inventory-turnover">0</div>
+                                <div class="metric-label">Inventory Turnover</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="warehouse-pick-rate">0</div>
+                                <div class="metric-label">Pick Rate (items/hr)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="iot-sensor-data-card">
+                        <h3>IoT Sensor Data</h3>
+                        <div class="chart-container">
+                            <canvas id="iotChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="current-temp">0°C</div>
+                                <div class="metric-label">Current Temp</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="humidity">0%</div>
+                                <div class="metric-label">Humidity</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card" id="transportation-efficiency-card">
-                    <h3>Transportation Efficiency</h3>
-                    <div class="chart-container">
-                        <canvas id="transportCostChart"></canvas>
+                <div id="supply-chain-section" class="category-section" style="display:none;">
+                    <div class="card" id="global-performance-card">
+                        <h3>Global Performance</h3>
+                        <div class="chart-container">
+                            <canvas id="onTimeDeliveryChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="open-stores">0</div>
+                                <div class="metric-label">Open Stores</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="on-time-delivery">0%</div>
+                                <div class="metric-label">On-Time Delivery</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="order-fulfillment-time">0 hrs</div>
+                                <div class="metric-label">Order Fulfillment</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="return-rate">0%</div>
+                                <div class="metric-label">Return Rate</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="metric-grid">
-                        <div class="metric-item">
-                            <div class="metric-value" id="transport-cost-per-mile">$0</div>
-                            <div class="metric-label">Cost/Mile</div>
+
+                    <div class="card" id="supplier-performance-card">
+                        <h3>Supplier Performance</h3>
+                        <div class="chart-container">
+                            <canvas id="supplierOnTimeChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="supplier-on-time">0%</div>
+                                <div class="metric-label">On-Time Delivery</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="supplier-defect-rate">0%</div>
+                                <div class="metric-label">Defect Rate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="transportation-efficiency-card">
+                        <h3>Transportation Efficiency</h3>
+                        <div class="chart-container">
+                            <canvas id="transportCostChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="transport-cost-per-mile">$0</div>
+                                <div class="metric-label">Cost/Mile</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card" id="weather-impact-card">
-                    <h3>Weather Impact</h3>
-                    <div class="weather-widget">
-                        <div class="weather-icon" id="weather-icon">☁️</div>
-                        <div class="weather-temp" id="weather-temp">--°C</div>
-                        <div class="weather-condition" id="weather-condition">Loading...</div>
+                <div id="sustainability-weather-section" class="category-section" style="display:none;">
+                    <div class="card" id="sustainability-metrics-card">
+                        <h3>Sustainability Metrics</h3>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="waste-saved">0 kg</div>
+                                <div class="metric-label">Waste Saved</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="carbon-reduced">0 kg</div>
+                                <div class="metric-label">Carbon Reduced</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="weather-impact-card">
+                        <h3>Weather Impact</h3>
+                        <div class="weather-widget">
+                            <div class="weather-icon" id="weather-icon">☁️</div>
+                            <div class="weather-temp" id="weather-temp">--°C</div>
+                            <div class="weather-condition" id="weather-condition">Loading...</div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -20,6 +20,7 @@ class MessageBroker {
             });
         }
         this.io.emit(topic, data);
+        console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
     }
 }
 
@@ -202,6 +203,7 @@ class SmartAutonomousDecisionMakingService {
 class SimulationService {
     constructor(broker) {
         this.broker = broker;
+        this.webTraffic = 1000; // Initial web traffic
     }
 
     run(scenario) {
@@ -249,6 +251,40 @@ class SimulationService {
                     { id: 'supplier-defect-rate', changeType: 'increase', valueChange: 'significant' }
                 ];
                 break;
+            case 'web_traffic_spike':
+                message += ' Simulating a web traffic spike. Expect increased website visitors and potential impact on sales.';
+                this.webTraffic = Math.floor(this.webTraffic * 1.5); // Increase web traffic by 50%
+                affectedMetrics = ['current-web-traffic', 'total-sales'];
+                metricChanges = [
+                    { id: 'current-web-traffic', changeType: 'increase', valueChange: 'significant' },
+                    { id: 'total-sales', changeType: 'increase', valueChange: 'moderate' }
+                ];
+                break;
+            case 'inventory_fill':
+                message += ' Simulating inventory being filled. Expect increased warehouse occupancy and items.';
+                affectedMetrics = ['warehouse-occupancy', 'warehouse-items'];
+                metricChanges = [
+                    { id: 'warehouse-occupancy', changeType: 'increase', valueChange: 'moderate' },
+                    { id: 'warehouse-items', changeType: 'increase', valueChange: 'moderate' }
+                ];
+                break;
+            case 'inventory_stockout':
+                message += ' Simulating an inventory stockout. Expect decreased warehouse items and potential lost sales.';
+                affectedMetrics = ['warehouse-occupancy', 'warehouse-items', 'total-sales'];
+                metricChanges = [
+                    { id: 'warehouse-occupancy', changeType: 'decrease', valueChange: 'moderate' },
+                    { id: 'warehouse-items', changeType: 'decrease', valueChange: 'moderate' },
+                    { id: 'total-sales', changeType: 'decrease', valueChange: 'moderate' }
+                ];
+                break;
+            case 'seasonal_spike':
+                message += ' Simulating a seasonal spike. Expect significant increase in sales and web traffic.';
+                affectedMetrics = ['total-sales', 'current-web-traffic'];
+                metricChanges = [
+                    { id: 'total-sales', changeType: 'increase', valueChange: 'significant' },
+                    { id: 'current-web-traffic', changeType: 'increase', valueChange: 'significant' }
+                ];
+                break;
             default:
                 message += ' Unknown scenario.';
         }
@@ -264,11 +300,20 @@ class SimulationService {
         };
         this.broker.publish('simulation_result', result);
     }
+
+    getWebTraffic() {
+        return this.webTraffic;
+    }
+
+    setWebTraffic(value) {
+        this.webTraffic = value;
+    }
 }
 
 class MetricsService {
-    constructor(broker) {
+    constructor(broker, simulationService) {
         this.broker = broker;
+        this.simulationService = simulationService; // Inject SimulationService
         this.warehouseOccupancy = 0.75;
         this.warehouseItems = 15000;
         this.wasteSaved = 1200;
@@ -314,22 +359,31 @@ class MetricsService {
         const conditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Stormy'];
         this.weather.condition = conditions[Math.floor(Math.random() * conditions.length)];
 
-        this.broker.publish('metrics_update', {
+        // Incorporate web traffic into sales data
+        const baseSales = Math.floor(Math.random() * 300);
+        const webTrafficFactor = this.simulationService.getWebTraffic() / 1000; // Normalize by initial traffic
+        const salesWithTraffic = Math.floor(baseSales * webTrafficFactor);
+
+        const metricsData = {
             warehouseOccupancy: this.warehouseOccupancy.toFixed(2),
             warehouseItems: this.warehouseItems,
             wasteSaved: this.wasteSaved,
             carbonReduced: this.carbonReduced,
             openStores: this.openStores,
             onTimeDelivery: this.onTimeDelivery.toFixed(2),
-            inventoryTurnover: this.inventoryTurnover.toFixed(2),
+            inventoryTurnover: this.inventoryTurnover,
             orderFulfillmentTime: this.orderFulfillmentTime.toFixed(0),
             supplierOnTimeDelivery: this.supplierOnTimeDelivery.toFixed(2),
             supplierDefectRate: this.supplierDefectRate.toFixed(2),
             transportationCostPerMile: this.transportationCostPerMile.toFixed(2),
             warehousePickRate: this.warehousePickRate,
             returnRate: this.returnRate.toFixed(3),
-            weather: this.weather
-        });
+            weather: this.weather,
+            webTraffic: this.simulationService.getWebTraffic(),
+            sales: salesWithTraffic, // Updated sales
+        };
+        console.log('[MetricsService] Generated metrics:', metricsData);
+        this.broker.publish('metrics_update', metricsData);
     }
 }
 
