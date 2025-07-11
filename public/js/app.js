@@ -8,6 +8,7 @@ let onTimeDeliveryChart;
 let supplierOnTimeChart;
 let transportCostChart;
 let webTrafficChart;
+let impactChart; // New chart for decision impact
 
 let activeAnomaly = null;
 
@@ -319,6 +320,33 @@ function initializeCharts() {
             }
         }
     });
+
+    const impactCtx = document.getElementById('impactChart').getContext('2d');
+    impactChart = new Chart(impactCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Sales Increase', 'Inventory Saved'],
+            datasets: [{
+                label: 'Impact',
+                data: [0, 0],
+                backgroundColor: ['#4ade80', '#0071ce'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
 }
 
 socket.on('update', (data) => {
@@ -354,6 +382,75 @@ socket.on('decision', (decision) => {
     decisionsDisplayEl.prepend(decisionEl);
     addLogEntry('decision', `Decision Made: ${decision.message}`);
 });
+
+socket.on('decision_suggestion', (suggestion) => {
+    const suggestionsContainer = document.getElementById('decision-suggestions');
+    const suggestionEl = document.createElement('div');
+    suggestionEl.id = `suggestion-${suggestion.id}`;
+    suggestionEl.className = 'alert-item'; // Re-use alert-item style for now
+    suggestionEl.innerHTML = `
+        <p><strong>Suggested Decision:</strong> ${suggestion.message}</p>
+        <button class="btn" onclick="approveDecision(${suggestion.id})">Approve</button>
+        <button class="btn" onclick="rejectDecision(${suggestion.id})">Reject</button>
+    `;
+    suggestionsContainer.prepend(suggestionEl);
+    addLogEntry('decision-suggestion', `New Decision Suggestion: ${suggestion.message}`);
+});
+
+socket.on('decision_impact_reported', (impactData) => {
+    const impactDisplay = document.getElementById('decision-impact-display');
+    document.getElementById('impact-sales-increase').textContent = impactData.impact.salesIncrease;
+    document.getElementById('impact-inventory-saved').textContent = impactData.impact.inventorySaved;
+
+    // Update impact chart
+    impactChart.data.datasets[0].data[0] = impactData.impact.salesIncrease;
+    impactChart.data.datasets[0].data[1] = impactData.impact.inventorySaved;
+    impactChart.update();
+
+    addLogEntry('decision-impact', `Decision Impact: ${impactData.message}. Sales Increase: ${impactData.impact.salesIncrease}, Inventory Saved: ${impactData.impact.inventorySaved} units`);
+});
+
+async function approveDecision(suggestionId) {
+    const suggestionEl = document.getElementById(`suggestion-${suggestionId}`);
+    if (!suggestionEl) return;
+
+    // Retrieve the original suggestion data (you might need to store it globally or in a map)
+    // For simplicity, let's assume we can reconstruct it or fetch it if needed.
+    // In a real app, you'd pass the full suggestion object or its ID to the backend
+    // and the backend would retrieve it from its temporary store.
+    // For this example, we'll just send the ID and a generic message.
+    const decisionToApprove = {
+        id: suggestionId,
+        type: 'user_approved',
+        message: `User approved decision for suggestion ID ${suggestionId}`,
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const response = await fetch('/api/approve_decision', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ decision: decisionToApprove }),
+        });
+        const result = await response.json();
+        console.log(result.message);
+        addLogEntry('decision', `Decision Approved: ${decisionToApprove.message}`);
+        suggestionEl.remove(); // Remove the suggestion from UI
+    } catch (error) {
+        console.error('Error approving decision:', error);
+        addLogEntry('error', `Error approving decision: ${error.message}`);
+    }
+}
+
+function rejectDecision(suggestionId) {
+    const suggestionEl = document.getElementById(`suggestion-${suggestionId}`);
+    if (suggestionEl) {
+        suggestionEl.remove();
+        addLogEntry('decision-rejected', `Decision Rejected for suggestion ID ${suggestionId}`);
+    }
+}
 
 socket.on('metrics_update', (metrics) => {
     document.getElementById('warehouse-occupancy').textContent = `${(metrics.warehouseOccupancy * 100).toFixed(1)}%`;

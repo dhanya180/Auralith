@@ -147,8 +147,11 @@ class SmartAutonomousDecisionMakingService {
 
     notify(topic, data) {
         if (topic === 'anomaly' || topic === 'simulation_result') {
-            const decision = this.makeDecision(data);
-            this.io.emit('decision', decision);
+            const decisionSuggestion = this.makeDecision(data);
+            if (decisionSuggestion) {
+                decisionSuggestion.id = Date.now(); // Unique ID for the suggestion
+                this.broker.publish('decision_suggestion', decisionSuggestion);
+            }
 
             // Trigger AI insights for solution if it's an anomaly or simulation result
             if (data.type === 'anomaly' || data.type === 'simulation_result') {
@@ -157,46 +160,66 @@ class SmartAutonomousDecisionMakingService {
         }
     }
 
+    executeApprovedDecision(decision) {
+        console.log(`[SADM] Executing approved decision:`, decision);
+        this.broker.publish('decision_made', decision);
+        // Simulate impact after a delay
+        setTimeout(() => {
+            this.broker.publish('decision_impact_reported', {
+                decisionId: decision.id,
+                impact: {
+                    salesIncrease: Math.floor(Math.random() * 500) + 100, // Example impact
+                    inventorySaved: Math.floor(Math.random() * 200) + 50
+                },
+                message: `Decision '${decision.type}' impact reported.`
+            });
+        }, 10000); // Report impact after 10 seconds
+    }
+
     makeDecision(data) {
-        // Simplified decision making based on anomaly type
-        if (data.anomaly && data.anomaly.type === 'demand_surge') {
-            return {
-                type: 'restock_order',
-                message: `Automatically ordered additional inventory for ${data.anomaly.location} due to demand surge.`, 
-                timestamp: new Date().toISOString(),
-                details: { quantity: 100, eta: '2 hours' },
-                anomaly: data,
-            };
-        } else if (data.anomaly && data.anomaly.type === 'delivery_delay') {
-            return {
-                type: 'reroute_shipment',
-                message: `Initiating reroute for delayed shipments.`, 
-                timestamp: new Date().toISOString(),
-                details: { impact: 'medium' },
-                anomaly: data,
-            };
-        } else if (data.anomaly && data.anomaly.type === 'warehouse_full') {
-            return {
-                type: 'transfer_inventory',
-                message: `Initiating inventory transfer to less occupied warehouse.`, 
-                timestamp: new Date().toISOString(),
-                details: { quantity: 500, destination: 'Warehouse B' },
-                anomaly: data,
-            };
-        } else if (data.type === 'simulation_result') {
-            return {
-                type: 'simulation_action',
-                message: `Simulated anomaly: ${data.scenario}. AI will provide insights.`, 
-                timestamp: new Date().toISOString(),
-                anomaly: data,
-            };
+        let decision = null;
+        const anomalyType = data.anomaly ? data.anomaly.type : data.scenario; // Handle both anomaly and simulation_result
+
+        switch (anomalyType) {
+            case 'demand_surge':
+            case 'seasonal_spike':
+                decision = {
+                    type: 'high_priority_restock',
+                    message: `Suggested: High priority restock due to ${anomalyType.replace(/_/g, ' ')}.`,
+                    timestamp: new Date().toISOString(),
+                    details: { quantity: 500, priority: 'high', reason: anomalyType },
+                    anomaly: data,
+                };
+                break;
+            case 'delivery_delay':
+                decision = {
+                    type: 'reroute_shipment',
+                    message: `Suggested: Reroute delayed shipments.`,
+                    timestamp: new Date().toISOString(),
+                    details: { impact: 'medium' },
+                    anomaly: data,
+                };
+                break;
+            case 'warehouse_full':
+                decision = {
+                    type: 'transfer_inventory',
+                    message: `Suggested: Initiate inventory transfer to less occupied warehouse.`,
+                    timestamp: new Date().toISOString(),
+                    details: { quantity: 500, destination: 'Warehouse B' },
+                    anomaly: data,
+                };
+                break;
+            // Add other specific anomaly types here if needed
+            default:
+                decision = {
+                    type: 'ai_suggested_action',
+                    message: `Suggested action for ${anomalyType.replace(/_/g, ' ')}.`,
+                    timestamp: new Date().toISOString(),
+                    anomaly: data,
+                };
+                break;
         }
-        return {
-            type: 'no_action',
-            message: 'No specific autonomous action for this anomaly.',
-            timestamp: new Date().toISOString(),
-            anomaly: data,
-        };
+        return decision;
     }
 }
 

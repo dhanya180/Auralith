@@ -47,6 +47,12 @@ app.post('/api/feedback', (req, res) => {
   res.json({ message: 'Feedback received.' });
 });
 
+app.post('/api/approve_decision', (req, res) => {
+  const { decision } = req.body;
+  smartAutonomousDecisionMakingService.executeApprovedDecision(decision);
+  res.json({ message: 'Decision approved and executed.' });
+});
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);

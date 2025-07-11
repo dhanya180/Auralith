@@ -131,7 +131,7 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-        
+
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -139,7 +139,8 @@
             margin-bottom: 30px;
         }
 
-        .left-column, .right-column {
+        .left-column,
+        .right-column {
             display: flex;
             flex-direction: column;
             gap: 30px;
@@ -181,7 +182,9 @@
             font-size: 0.95rem;
         }
 
-        .alert-item, .decision-item, .ai-solution-item {
+        .alert-item,
+        .decision-item,
+        .ai-solution-item {
             background-color: #f9f9f9;
             border-radius: 8px;
             padding: 10px 15px;
@@ -288,10 +291,21 @@
             color: var(--walmart-blue);
         }
 
-        .log-entry.anomaly strong { color: red; }
-        .log-entry.decision strong { color: green; }
-        .log-entry.ai-insight strong { color: purple; }
-        .log-entry.simulation strong { color: orange; }
+        .log-entry.anomaly strong {
+            color: red;
+        }
+
+        .log-entry.decision strong {
+            color: green;
+        }
+
+        .log-entry.ai-insight strong {
+            color: purple;
+        }
+
+        .log-entry.simulation strong {
+            color: orange;
+        }
 
         /* Anomaly Trend Indicators */
         .anomaly-negative-trend {
@@ -342,13 +356,14 @@
                 <button class="btn" id="simulate-seasonal-spike-btn">Simulate Seasonal Spike</button>
             </div>
         </div>
-        
+
         <div class="main-content">
             <div class="left-column">
                 <div class="card">
                     <h3>AI-Powered Insights</h3>
                     <div class="ai-insights-content" id="ai-insights-content">
-                        Welcome to Auralith! Click "Simulate Anomaly" to trigger a simulated anomaly and see the system's response.
+                        Welcome to Auralith! Click "Simulate Anomaly" to trigger a simulated anomaly and see the
+                        system's response.
                     </div>
                 </div>
 
@@ -362,17 +377,38 @@
                 <div class="card">
                     <h3>Autonomous Decisions</h3>
                     <div id="decisions-display">
-                        <p>No autonomous decisions made yet.</p>
+                        <p>No autonomous decisions made Pending</p>
+                    </div>
+                    <div id="decision-suggestions" style="margin-top: 20px;">
+                        <!-- Decision suggestions will be rendered here -->
+                    </div>
+                    <div id="decision-impact-display" style="margin-top: 20px;">
+                        <h3>Decision Impact</h3>
+                        <div class="chart-container">
+                            <canvas id="impactChart"></canvas>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-item">
+                                <div class="metric-value" id="impact-sales-increase">0</div>
+                                <div class="metric-label">Sales Increase</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value" id="impact-inventory-saved">0</div>
+                                <div class="metric-label">Inventory Saved</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="right-column">
-                <nav class="category-nav" style="margin-bottom: 20px; display: flex; justify-content: center; gap: 10px;">
+                <nav class="category-nav"
+                    style="margin-bottom: 20px; display: flex; justify-content: center; gap: 10px;">
                     <button class="btn category-btn active" data-category="sales-web">Sales & Web Traffic</button>
                     <button class="btn category-btn" data-category="warehouse-inventory">Warehouse & Inventory</button>
                     <button class="btn category-btn" data-category="supply-chain">Supply Chain Performance</button>
-                    <button class="btn category-btn" data-category="sustainability-weather">Sustainability & Weather</button>
+                    <button class="btn category-btn" data-category="sustainability-weather">Sustainability &
+                        Weather</button>
                 </nav>
 
                 <div id="sales-web-section" class="category-section active">
@@ -544,6 +580,8 @@
                 <div class="log-tab" data-log-category="ai-insight">AI Insights</div>
                 <div class="log-tab" data-log-category="simulation">Simulations</div>
                 <div class="log-tab" data-log-category="metric-update">Metrics</div>
+                <div class="log-tab" data-log-category="decision-suggestion">Suggestions</div>
+                <div class="log-tab" data-log-category="decision-impact">Impact</div>
             </div>
             <div class="log-content" id="log-content-all"></div>
             <div class="log-content" id="log-content-anomaly" style="display:none;"></div>
@@ -551,6 +589,8 @@
             <div class="log-content" id="log-content-ai-insight" style="display:none;"></div>
             <div class="log-content" id="log-content-simulation" style="display:none;"></div>
             <div class="log-content" id="log-content-metric-update" style="display:none;"></div>
+            <div class="log-content" id="log-content-decision-suggestion" style="display:none;"></div>
+            <div class="log-content" id="log-content-decision-impact" style="display:none;"></div>
         </div>
     </div>
 
