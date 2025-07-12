@@ -13,15 +13,36 @@ class MessageBroker {
         this.topics[topic].push(subscriber);
     }
 
+    // publish(topic, data) {
+    //     if (this.topics[topic]) {
+    //         this.topics[topic].forEach(subscriber => {
+    //             subscriber.notify(topic, data);
+    //         });
+    //     }
+    //     this.io.emit(topic, data);
+    //     console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
+    // }
+
     publish(topic, data) {
-        if (this.topics[topic]) {
-            this.topics[topic].forEach(subscriber => {
-                subscriber.notify(topic, data);
-            });
-        }
-        this.io.emit(topic, data);
-        console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
-    }
+  // First, dispatch to any in‑process subscribers...
+  if (this.topics[topic]) {
+    this.topics[topic].forEach(subscriber => {
+      // If they subscribed by passing an object with notify(), use that:
+      if (typeof subscriber.notify === 'function') {
+        subscriber.notify(topic, data);
+      }
+      // If they subscribed with a function, call it directly:
+      else if (typeof subscriber === 'function') {
+        subscriber(data);
+      }
+    });
+  }
+
+  // Then emit via socket.io:
+  this.io.emit(topic, data);
+  console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
+}
+
 }
 
 class DataIngestionService {

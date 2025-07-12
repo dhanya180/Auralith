@@ -35,6 +35,14 @@ const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingSe
 const demandForecastingService = new DemandForecastingService(broker);
 const inventoryManagementService = new InventoryManagementService(broker);
 
+
+let latestMetrics = {};
+
+// Whenever MetricsService publishes an update, stash it
+broker.subscribe('metrics_update', (metricsData) => {
+  latestMetrics = metricsData;
+});
+
 // API Routes
 app.post('/api/simulate', (req, res) => {
   const { scenario } = req.body;
@@ -64,6 +72,10 @@ app.post('/api/approve_decision', (req, res) => {
     console.error('Error in approve_decision:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+app.get('/api/metrics', (req, res) => {
+  res.json(latestMetrics);
 });
 
 // Socket.IO connection handling
