@@ -4,7 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService } = require('./services.js');
+const { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService, DemandForecastingService, InventoryManagementService } = require('./services.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +32,8 @@ const simulationService = new SimulationService(broker);
 const metricsService = new MetricsService(broker, simulationService);
 const aiInsightsService = new AIInsightsService(broker);
 const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingService(broker, io, aiInsightsService);
+const demandForecastingService = new DemandForecastingService(broker);
+const inventoryManagementService = new InventoryManagementService(broker);
 
 // API Routes
 app.post('/api/simulate', (req, res) => {
@@ -48,9 +50,20 @@ app.post('/api/feedback', (req, res) => {
 });
 
 app.post('/api/approve_decision', (req, res) => {
-  const { decision } = req.body;
-  smartAutonomousDecisionMakingService.executeApprovedDecision(decision);
-  res.json({ message: 'Decision approved and executed.' });
+  try {
+    const { decision } = req.body;
+    console.log('Received decision for approval:', decision);
+    
+    if (!decision) {
+      return res.status(400).json({ error: 'No decision provided' });
+    }
+    
+    smartAutonomousDecisionMakingService.executeApprovedDecision(decision);
+    res.json({ message: 'Decision approved and executed.' });
+  } catch (error) {
+    console.error('Error in approve_decision:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Socket.IO connection handling
