@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key-here');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key here');
 
 // Initialize services
 const broker = new MessageBroker(io);

@@ -437,8 +437,8 @@ class MetricsService {
 class AIInsightsService {
     constructor(broker) {
         this.broker = broker;
-        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key-here');
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key here');
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         setInterval(() => this.generateInsights(), 15000);
     }
