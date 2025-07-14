@@ -4,7 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService } = require('./services.js');
+const { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService, DemandForecastingService, InventoryManagementService } = require('./services.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key-here');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key here');
 
 // Initialize services
 const broker = new MessageBroker(io);
@@ -32,6 +32,16 @@ const simulationService = new SimulationService(broker);
 const metricsService = new MetricsService(broker, simulationService);
 const aiInsightsService = new AIInsightsService(broker);
 const smartAutonomousDecisionMakingService = new SmartAutonomousDecisionMakingService(broker, io, aiInsightsService);
+const demandForecastingService = new DemandForecastingService(broker);
+const inventoryManagementService = new InventoryManagementService(broker);
+
+
+let latestMetrics = {};
+
+// Whenever MetricsService publishes an update, stash it
+broker.subscribe('metrics_update', (metricsData) => {
+  latestMetrics = metricsData;
+});
 
 // API Routes
 app.post('/api/simulate', (req, res) => {
@@ -48,9 +58,24 @@ app.post('/api/feedback', (req, res) => {
 });
 
 app.post('/api/approve_decision', (req, res) => {
-  const { decision } = req.body;
-  smartAutonomousDecisionMakingService.executeApprovedDecision(decision);
-  res.json({ message: 'Decision approved and executed.' });
+  try {
+    const { decision } = req.body;
+    console.log('Received decision for approval:', decision);
+    
+    if (!decision) {
+      return res.status(400).json({ error: 'No decision provided' });
+    }
+    
+    smartAutonomousDecisionMakingService.executeApprovedDecision(decision);
+    res.json({ message: 'Decision approved and executed.' });
+  } catch (error) {
+    console.error('Error in approve_decision:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/metrics', (req, res) => {
+  res.json(latestMetrics);
 });
 
 // Socket.IO connection handling

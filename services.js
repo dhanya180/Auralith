@@ -13,15 +13,36 @@ class MessageBroker {
         this.topics[topic].push(subscriber);
     }
 
+    // publish(topic, data) {
+    //     if (this.topics[topic]) {
+    //         this.topics[topic].forEach(subscriber => {
+    //             subscriber.notify(topic, data);
+    //         });
+    //     }
+    //     this.io.emit(topic, data);
+    //     console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
+    // }
+
     publish(topic, data) {
-        if (this.topics[topic]) {
-            this.topics[topic].forEach(subscriber => {
-                subscriber.notify(topic, data);
-            });
-        }
-        this.io.emit(topic, data);
-        console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
-    }
+  // First, dispatch to any in‑process subscribers...
+  if (this.topics[topic]) {
+    this.topics[topic].forEach(subscriber => {
+      // If they subscribed by passing an object with notify(), use that:
+      if (typeof subscriber.notify === 'function') {
+        subscriber.notify(topic, data);
+      }
+      // If they subscribed with a function, call it directly:
+      else if (typeof subscriber === 'function') {
+        subscriber(data);
+      }
+    });
+  }
+
+  // Then emit via socket.io:
+  this.io.emit(topic, data);
+  console.log(`[MessageBroker] Published topic: ${topic}, data:`, data);
+}
+
 }
 
 class DataIngestionService {
@@ -30,9 +51,12 @@ class DataIngestionService {
     }
 
     ingest(data) {
-        console.log('Data Ingestion: Writing to data lake', data);
-        this.broker.publish('raw_data', data);
-    }
+    // Simulate writing to data lake
+    this.dataLake = this.dataLake || [];
+    this.dataLake.push(data);
+    console.log(`[DataLake] Stored ${this.dataLake.length} records`);
+    this.broker.publish('raw_data', data);
+}
 }
 
 class DataProcessingService {
@@ -413,8 +437,8 @@ class MetricsService {
 class AIInsightsService {
     constructor(broker) {
         this.broker = broker;
-        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key-here');
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'your-api-key here');
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         setInterval(() => this.generateInsights(), 15000);
     }
@@ -446,4 +470,90 @@ class AIInsightsService {
     }
 }
 
-module.exports = { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService };
+class DemandForecastingService {
+    constructor(broker) {
+        this.broker = broker;
+        this.broker.subscribe('processed_data', this);
+        this.forecastData = { predicted_demand: 100, confidence: 0.8 };
+    }
+    
+    notify(topic, data) {
+        if (topic === 'processed_data') {
+            // Simple forecasting logic
+            this.forecastData.predicted_demand = Math.floor(80 + Math.random() * 40);
+            this.broker.publish('demand_forecast', this.forecastData);
+        }
+    }
+}
+
+class InventoryManagementService {
+    constructor(broker) {
+        this.broker = broker;
+        this.broker.subscribe('demand_forecast', this);
+        this.broker.subscribe('processed_data', this);
+        this.broker.subscribe('simulation_result', this);
+        this.stockLevels = { 
+            warehouse_1: 1000, 
+            warehouse_2: 800, 
+            warehouse_3: 1200 
+        };
+        
+        // Update stock levels periodically
+        setInterval(() => this.updateStockLevels(), 8000);
+    }
+    
+    notify(topic, data) {
+        if (topic === 'demand_forecast' && data.predicted_demand > 120) {
+            this.broker.publish('restock_alert', {
+                message: 'High demand predicted - consider restocking',
+                predicted_demand: data.predicted_demand
+            });
+        }
+        
+        if (topic === 'simulation_result') {
+            this.handleSimulationImpact(data);
+        }
+    }
+    
+    updateStockLevels() {
+        // Simulate normal stock level changes
+        this.stockLevels.warehouse_1 = Math.max(0, this.stockLevels.warehouse_1 + (Math.random() * 100 - 50));
+        this.stockLevels.warehouse_2 = Math.max(0, this.stockLevels.warehouse_2 + (Math.random() * 80 - 40));
+        this.stockLevels.warehouse_3 = Math.max(0, this.stockLevels.warehouse_3 + (Math.random() * 120 - 60));
+        
+        const totalStock = this.stockLevels.warehouse_1 + this.stockLevels.warehouse_2 + this.stockLevels.warehouse_3;
+        
+        this.broker.publish('stock_levels_update', {
+            warehouse_1: Math.floor(this.stockLevels.warehouse_1),
+            warehouse_2: Math.floor(this.stockLevels.warehouse_2),
+            warehouse_3: Math.floor(this.stockLevels.warehouse_3),
+            total_stock: Math.floor(totalStock)
+        });
+    }
+    
+    handleSimulationImpact(data) {
+        switch(data.scenario) {
+            case 'inventory_fill':
+                this.stockLevels.warehouse_1 += 200;
+                this.stockLevels.warehouse_2 += 150;
+                this.stockLevels.warehouse_3 += 250;
+                break;
+            case 'inventory_stockout':
+                this.stockLevels.warehouse_1 = Math.max(0, this.stockLevels.warehouse_1 - 300);
+                this.stockLevels.warehouse_2 = Math.max(0, this.stockLevels.warehouse_2 - 200);
+                this.stockLevels.warehouse_3 = Math.max(0, this.stockLevels.warehouse_3 - 400);
+                break;
+            case 'demand_surge':
+            case 'seasonal_spike':
+                this.stockLevels.warehouse_1 = Math.max(0, this.stockLevels.warehouse_1 - 100);
+                this.stockLevels.warehouse_2 = Math.max(0, this.stockLevels.warehouse_2 - 80);
+                this.stockLevels.warehouse_3 = Math.max(0, this.stockLevels.warehouse_3 - 120);
+                break;
+        }
+        
+        // Emit updated stock levels immediately after simulation
+        this.updateStockLevels();
+    }
+}
+
+module.exports = { MessageBroker, DataIngestionService, DataProcessingService, AnomalyDetectionService, SmartAutonomousDecisionMakingService, SimulationService, MetricsService, AIInsightsService, DemandForecastingService, InventoryManagementService };

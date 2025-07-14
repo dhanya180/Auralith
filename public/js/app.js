@@ -14,6 +14,7 @@ let activeAnomaly = null;
 
 let activeCategory = 'sales-web'; // Default active category
 let previousMetrics = {}; // To store previous metric values for trend indicators
+//let storedSuggestions = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeCharts();
@@ -384,6 +385,7 @@ socket.on('decision', (decision) => {
 });
 
 socket.on('decision_suggestion', (suggestion) => {
+    //storedSuggestions[suggestion.id] = suggestion;
     const suggestionsContainer = document.getElementById('decision-suggestions');
     const suggestionEl = document.createElement('div');
     suggestionEl.id = `suggestion-${suggestion.id}`;
@@ -427,7 +429,7 @@ async function approveDecision(suggestionId) {
     };
 
     try {
-        const response = await fetch('/api/approve_decision', {
+        const response = await fetch('http://localhost:3001/api/approve_decision', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -474,18 +476,13 @@ socket.on('metrics_update', (metrics) => {
     document.getElementById('weather-condition').textContent = metrics.weather.condition;
     document.getElementById('humidity').textContent = `${metrics.weather.humidity}%`;
 
-    // Update charts based on active category
-    if (activeCategory === 'sales-web') {
-        updateChart(salesChart, new Date().toISOString(), metrics.sales);
-        updateChart(webTrafficChart, new Date().toISOString(), metrics.webTraffic);
-    } else if (activeCategory === 'warehouse-inventory') {
-        updateChart(inventoryTurnoverChart, new Date().toISOString(), metrics.inventoryTurnover);
-        // IoT chart is updated by the 'update' event, not metrics_update
-    } else if (activeCategory === 'supply-chain') {
-        updateChart(onTimeDeliveryChart, new Date().toISOString(), metrics.onTimeDelivery);
-        updateChart(supplierOnTimeChart, new Date().toISOString(), metrics.supplierOnTimeDelivery);
-        updateChart(transportCostChart, new Date().toISOString(), metrics.transportationCostPerMile);
-    }
+    // Update ALL charts regardless of active category
+    updateChart(salesChart, new Date().toISOString(), metrics.sales);
+    updateChart(webTrafficChart, new Date().toISOString(), metrics.webTraffic);
+    updateChart(inventoryTurnoverChart, new Date().toISOString(), metrics.inventoryTurnover);
+    updateChart(onTimeDeliveryChart, new Date().toISOString(), metrics.onTimeDelivery);
+    updateChart(supplierOnTimeChart, new Date().toISOString(), metrics.supplierOnTimeDelivery);
+    updateChart(transportCostChart, new Date().toISOString(), metrics.transportationCostPerMile);
 
     // Apply trend indicators
     applyTrendIndicators(metrics, previousMetrics);
@@ -543,6 +540,35 @@ socket.on('simulation_result', (data) => {
     highlightMetrics(data.affectedMetrics, 'red');
     applyAnomalyTrendIndicators(data.metricChanges);
     activeAnomaly = data;
+});
+
+// Add these socket listeners:
+socket.on('demand_forecast', (data) => {
+    document.getElementById('predicted-demand').textContent = data.predicted_demand;
+    addLogEntry('forecast', `Demand Forecast: ${data.predicted_demand} units`);
+});
+
+socket.on('stock_levels_update', (data) => {
+    console.log('Stock levels updated:', data);
+    
+    // Update warehouse stock displays
+    const warehouse1Element = document.getElementById('warehouse-1-stock');
+    const warehouse2Element = document.getElementById('warehouse-2-stock');
+    const warehouse3Element = document.getElementById('warehouse-3-stock');
+    const totalStockElement = document.getElementById('total-stock');
+    
+    if (warehouse1Element) {
+        warehouse1Element.textContent = `${data.warehouse_1} units`;
+    }
+    if (warehouse2Element) {
+        warehouse2Element.textContent = `${data.warehouse_2} units`;
+    }
+    if (warehouse3Element) {
+        warehouse3Element.textContent = `${data.warehouse_3} units`;
+    }
+    if (totalStockElement) {
+        totalStockElement.textContent = `${data.total_stock} units`;
+    }
 });
 
 function applyAnomalyTrendIndicators(metricChanges) {
@@ -620,6 +646,18 @@ function highlightMetrics(metricIds, colorClass) {
             }
         }
     });
+}
+
+function highlightStockLevels(stockLevel, element) {
+    if (stockLevel < 200) {
+        element.classList.add('highlight-red');
+        element.classList.remove('highlight-green');
+    } else if (stockLevel > 1500) {
+        element.classList.add('highlight-green');
+        element.classList.remove('highlight-red');
+    } else {
+        element.classList.remove('highlight-red', 'highlight-green');
+    }
 }
 
 function clearHighlights() {
